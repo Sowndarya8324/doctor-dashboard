@@ -1,5 +1,8 @@
 import axios from "axios";
 
 export const api = axios.create({
-  baseURL: "http://192.168.43.173:5000",
+  baseURL: "https://gold-experts-cover.loca.lt",
+  headers: {
+    "Content-Type": "application/json",
+  },
 });
