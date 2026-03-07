@@ -5,24 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js",
-    "test": "echo \"No tests yet\""
+    "dev": "node server.js"
   },
-  "keywords": [
-    "doctor-dashboard",
-    "health",
-    "node",
-    "express",
-    "api"
-  ],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "helmet": "^8.1.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
   }
 }
