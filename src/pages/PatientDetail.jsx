@@ -1,95 +1,106 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { api } from "../services/api";
 import { COLORS } from "../theme/colors";
 
+import {
+  Chart as ChartJS,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+} from "chart.js";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(LineElement, CategoryScale, LinearScale, PointElement);
+
 export default function PatientDetail() {
   const { id } = useParams();
-  const navigate = useNavigate();
-
   const [patient, setPatient] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState("");
-
-  const loadPatient = async () => {
-    try {
-      setLoading(true);
-      setErr("");
-
-      const res = await api.get(`/api/patients/${id}`);
-      const payload = res.data?.data ? res.data.data : res.data;
-      setPatient(payload);
-    } catch (e) {
-      console.log(e);
-      setErr("Patient details load ஆகல.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
     loadPatient();
   }, [id]);
 
-  if (loading) return <p style={{ color: COLORS.gray }}>Loading...</p>;
+  const loadPatient = async () => {
+    const res = await api.get(`/api/patients/${id}`);
+    setPatient(res.data?.data || null);
+  };
 
-  if (err) {
-    return (
-      <div style={styles.errorBox}>
-        <div style={{ color: "#be123c", fontWeight: 700 }}>{err}</div>
-        <button style={styles.btn} onClick={loadPatient}>Retry</button>
-      </div>
-    );
-  }
+  if (!patient) return <p>Loading...</p>;
 
-  if (!patient) return <p style={{ color: COLORS.gray }}>No data found.</p>;
+  const labels = ["Day 1", "Day 2", "Day 3", "Day 4", "Day 5", "Day 6", "Day 7"];
 
-  const isHigh = String(patient.risk).toLowerCase() === "high";
+  const heartRateData = {
+    labels,
+    datasets: [
+      {
+        label: "Heart Rate",
+        data: patient.heartRate,
+        borderColor: "#ec4899",
+        backgroundColor: "#fce7f3",
+      },
+    ],
+  };
+
+  const kickData = {
+    labels,
+    datasets: [
+      {
+        label: "Kick Count",
+        data: patient.kickCount,
+        borderColor: "#8b5cf6",
+        backgroundColor: "#ede9fe",
+      },
+    ],
+  };
 
   return (
     <div>
-      <div style={styles.headerRow}>
-        <div>
-          <h1 style={styles.title}>{patient.name}</h1>
-          <p style={styles.subtitle}>Patient ID: {patient.id}</p>
+      <h1 style={{ color: COLORS.primary }}>{patient.name}</h1>
+      <p>Mother ID: <b>{patient.motherId}</b></p>
+      <p>Baby ID: <b>{patient.babyId || "Not generated"}</b></p>
+      <p>Pregnancy Week: <b>{patient.week}</b></p>
+      <p>
+        Risk Level:{" "}
+        <b style={{ color: patient.risk === "High" ? "#dc2626" : "#059669" }}>
+          {patient.risk}
+        </b>
+      </p>
+
+      <div style={styles.grid}>
+        <div style={styles.card}>
+          <h3>Heart Rate Graph</h3>
+          <Line data={heartRateData} />
         </div>
 
-        <div style={styles.actions}>
-          <button style={styles.secondaryBtn} onClick={() => navigate("/patients")}>
-            Back
-          </button>
-          <button
-            style={styles.btn}
-            onClick={() => navigate(`/prescriptions?patientId=${encodeURIComponent(patient.id)}`)}
-          >
-            Prescribe
-          </button>
+        <div style={styles.card}>
+          <h3>Kick Counter Graph</h3>
+          <Line data={kickData} />
         </div>
       </div>
 
       <div style={styles.grid}>
-        <div style={styles.infoCard}>
-          <div style={styles.label}>Pregnancy Week</div>
-          <div style={styles.value}>{patient.week}</div>
+        <div style={styles.card}>
+          <h3>Heart Rate Day Change</h3>
+          <ul>
+            {patient.heartRateDayChanges.map((v, i) => (
+              <li key={i}>
+                Day {i + 1}: {v > 0 ? `+${v}` : v}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        <div style={styles.infoCard}>
-          <div style={styles.label}>Risk Level</div>
-          <div
-            style={{
-              ...styles.badge,
-              color: isHigh ? "#be123c" : "#065f46",
-              background: isHigh ? "#ffe4e6" : "#d1fae5",
-              border: isHigh ? "1px solid #fecdd3" : "1px solid #a7f3d0",
-            }}
-          >
-            {patient.risk}
-          </div>
-        </div>
-
-        <div style={styles.infoCard}>
-          <div style={styles.label}>Risk Score</div>
-          <div style={styles.value}>{patient.riskScore}</div>
+        <div style={styles.card}>
+          <h3>Kick Count Day Change</h3>
+          <ul>
+            {patient.kickCountDayChanges.map((v, i) => (
+              <li key={i}>
+                Day {i + 1}: {v > 0 ? `+${v}` : v}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
@@ -97,60 +108,16 @@ export default function PatientDetail() {
 }
 
 const styles = {
-  title: { color: COLORS.primary, marginBottom: 8, fontSize: "30px", fontWeight: 700 },
-  subtitle: { color: COLORS.gray, marginTop: 0, fontSize: "15px" },
-  headerRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    flexWrap: "wrap",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  actions: { display: "flex", gap: 8, flexWrap: "wrap" },
-  btn: {
-    background: COLORS.primary,
-    color: "#fff",
-    padding: "10px 14px",
-    borderRadius: 12,
-    fontWeight: 600,
-    fontSize: "14px",
-  },
-  secondaryBtn: {
-    background: "#0f172a",
-    color: "#fff",
-    padding: "10px 14px",
-    borderRadius: 12,
-    fontWeight: 600,
-    fontSize: "14px",
-  },
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 16,
+    gridTemplateColumns: "1fr 1fr",
+    gap: 18,
+    marginTop: 20,
   },
-  infoCard: {
+  card: {
     background: "#fff",
-    border: "1px solid #f1dbe6",
-    borderRadius: 18,
     padding: 18,
-    boxShadow: "0 8px 24px rgba(236,72,153,0.04)",
-  },
-  label: { color: "#6b7280", fontSize: 13, fontWeight: 600 },
-  value: { marginTop: 10, fontSize: 28, fontWeight: 700, color: "#111827" },
-  badge: {
-    display: "inline-block",
-    marginTop: 12,
-    padding: "8px 12px",
-    borderRadius: 999,
-    fontWeight: 600,
-    fontSize: 13,
-  },
-  errorBox: {
-    background: "#fff1f2",
-    padding: "14px",
-    borderRadius: "14px",
-    border: "1px solid #fecdd3",
-    maxWidth: "540px",
+    borderRadius: 18,
+    border: "1px solid #f1d4e4",
   },
 };

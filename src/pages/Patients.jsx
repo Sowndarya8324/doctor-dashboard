@@ -203,6 +203,20 @@ export default function Patients() {
                       </span>
                     </td>
                     <td style={styles.td}>
+  {p.latestPrescription ? (
+    <div>
+      <div style={{ fontWeight: 700 }}>{p.latestPrescription.medicine}</div>
+      <div style={{ fontSize: 12, color: COLORS.gray }}>
+        {p.latestPrescription.dosage}
+      </div>
+    </div>
+  ) : (
+    <span style={{ color: COLORS.gray }}>—</span>
+  )}
+</td>
+
+<td style={styles.td}>{p.prescriptionsCount ?? 0}</td>
+                    <td style={styles.td}>
                       <div style={styles.actionWrap} onClick={(e) => e.stopPropagation()}>
                         <button
                           style={styles.presBtn}

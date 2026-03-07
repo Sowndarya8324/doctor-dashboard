@@ -1,135 +1,134 @@
-import { useState } from "react";
-import { COLORS } from "../theme/colors";
+import { useMemo, useState } from "react";
 import { api } from "../services/api";
+import { COLORS } from "../theme/colors";
+
+const MOTHER_IDS = ["M001", "M002", "M003", "M004"];
 
 export default function BirthRegistration() {
-  const [form, setForm] = useState({
-    motherId: "M001",
-    dob: "",
-    gender: "Female",
-    weight: "",
-  });
+  const [motherId, setMotherId] = useState("M001");
+  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("Female");
+  const [weight, setWeight] = useState("");
+  const [msg, setMsg] = useState("");
+  const [generatedId, setGeneratedId] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const [status, setStatus] = useState("");
-  const [generatedBabyId, setGeneratedBabyId] = useState("");
+  const nextMotherId = useMemo(() => {
+    const idx = MOTHER_IDS.indexOf(motherId);
+    if (idx === -1 || idx === MOTHER_IDS.length - 1) return MOTHER_IDS[0];
+    return MOTHER_IDS[idx + 1];
+  }, [motherId]);
 
-  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
-
-  const onSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus("");
-    setGeneratedBabyId("");
-
     try {
-      const res = await api.post("/api/birth", form);
+      setLoading(true);
+      setMsg("");
+      setGeneratedId("");
 
-      if (res.data?.success) {
-        const babyId = res.data?.babyId || "";
-        setGeneratedBabyId(babyId);
-        setStatus("✅ Birth registered successfully");
+      const res = await api.post("/api/birth", {
+        motherId,
+        dob,
+        gender,
+        weight,
+      });
 
-        if (babyId) {
-          localStorage.setItem("latestBabyId", babyId);
-          localStorage.setItem("latestMotherId", form.motherId);
-        }
-      } else {
-        setStatus("❌ Failed to register birth");
-      }
+      setGeneratedId(res.data?.babyId || "");
+      setMsg(res.data?.message || "Birth registered successfully ✅");
+
+      setDob("");
+      setGender("Female");
+      setWeight("");
+
+      // next mother id auto
+      setMotherId(nextMotherId);
     } catch (err) {
-      console.log(err);
-      setStatus("❌ Backend connect ஆகல");
+      setMsg("Birth registration failed");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div>
-      <h1 style={styles.title}>Birth Registration</h1>
-      <p style={styles.subtitle}>Doctor marks delivery and generates a unique Baby ID.</p>
+      <h1 style={{ color: COLORS.primary }}>Birth Registration</h1>
+      <p style={{ color: COLORS.gray }}>Doctor marks delivery and generates a unique Baby ID.</p>
 
-      <form onSubmit={onSubmit} style={styles.card}>
-        <h2 style={styles.formTitle}>Register New Birth</h2>
-
+      <form onSubmit={handleSubmit} style={styles.card}>
         <label style={styles.label}>Mother ID</label>
-        <input name="motherId" value={form.motherId} onChange={onChange} style={styles.input} />
+        <select value={motherId} onChange={(e) => setMotherId(e.target.value)} style={styles.input}>
+          {MOTHER_IDS.map((id) => (
+            <option key={id} value={id}>{id}</option>
+          ))}
+        </select>
 
         <label style={styles.label}>Date of Birth</label>
-        <input type="date" name="dob" value={form.dob} onChange={onChange} style={styles.input} />
+        <input type="date" value={dob} onChange={(e) => setDob(e.target.value)} style={styles.input} required />
 
         <label style={styles.label}>Gender</label>
-        <select name="gender" value={form.gender} onChange={onChange} style={styles.input}>
-          <option value="Female">Female</option>
-          <option value="Male">Male</option>
+        <select value={gender} onChange={(e) => setGender(e.target.value)} style={styles.input}>
+          <option>Female</option>
+          <option>Male</option>
         </select>
 
         <label style={styles.label}>Birth Weight (kg) - optional</label>
-        <input
-          name="weight"
-          value={form.weight}
-          onChange={onChange}
-          style={styles.input}
-          placeholder="e.g. 2.8"
-        />
+        <input value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 2.8" style={styles.input} />
 
-        <button type="submit" style={styles.btn}>Register Birth ✅</button>
+        <button type="submit" style={styles.btn} disabled={loading}>
+          {loading ? "Registering..." : "Register Birth ✅"}
+        </button>
 
-        {status && <p style={styles.status}>{status}</p>}
-
-        {generatedBabyId && (
+        {generatedId ? (
           <div style={styles.successBox}>
-            <div style={styles.successTitle}>Generated Baby ID</div>
-            <div style={styles.babyId}>{generatedBabyId}</div>
+            <div><b>Generated Baby ID:</b> {generatedId}</div>
+            <div style={{ marginTop: 6 }}><b>Next Mother ID:</b> {nextMotherId}</div>
           </div>
-        )}
+        ) : null}
+
+        {msg ? <div style={{ marginTop: 12, color: "#047857", fontWeight: 700 }}>{msg}</div> : null}
       </form>
     </div>
   );
 }
 
 const styles = {
-  title: { color: COLORS.primary, marginBottom: 8, fontSize: "30px", fontWeight: 700 },
-  subtitle: { color: COLORS.gray, marginTop: 0, marginBottom: 20, fontSize: "15px" },
   card: {
-    maxWidth: 760,
     background: "#fff",
-    borderRadius: 18,
     padding: 24,
-    border: "1px solid #f1dbe6",
-    boxShadow: "0 8px 24px rgba(236,72,153,0.04)",
+    borderRadius: 20,
+    border: "1px solid #f1d4e4",
+    maxWidth: 760,
   },
-  formTitle: { fontSize: 22, fontWeight: 700, marginBottom: 20, color: "#111827" },
   label: {
     display: "block",
-    marginTop: 14,
-    marginBottom: 6,
-    fontWeight: 600,
-    color: "#111827",
+    fontWeight: 800,
+    marginTop: 16,
+    marginBottom: 8,
   },
   input: {
     width: "100%",
-    padding: "12px 14px",
+    padding: "14px 16px",
     borderRadius: 14,
-    border: "1px solid #ead5df",
-    fontSize: 14,
-    background: "#fff",
+    border: "1px solid #ead1df",
+    fontSize: 16,
   },
   btn: {
-    marginTop: 20,
     width: "100%",
-    background: COLORS.primary,
+    marginTop: 22,
+    background: "#ec4899",
     color: "#fff",
-    padding: "12px 14px",
+    border: "none",
+    padding: "14px 16px",
     borderRadius: 14,
-    fontWeight: 600,
-    fontSize: "15px",
+    fontWeight: 900,
+    cursor: "pointer",
+    fontSize: 18,
   },
-  status: { marginTop: 14, color: "#374151", fontWeight: 600 },
   successBox: {
     marginTop: 16,
-    padding: 16,
+    padding: 14,
     borderRadius: 14,
-    background: "#fdf2f8",
-    border: "1px solid #f9a8d4",
+    background: "#ecfdf5",
+    border: "1px solid #a7f3d0",
   },
-  successTitle: { fontSize: 13, color: "#9d174d", fontWeight: 700 },
-  babyId: { marginTop: 8, fontSize: 22, fontWeight: 700, color: "#be185d" },
 };
